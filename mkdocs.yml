@@ -1,0 +1,58 @@
+site_name: geointerp
+site_description: geospatial interpolations
+
+repo_url: https://github.com/mullenkamp/geointerp
+repo_name: mullenkamp/geointerp
+
+theme:
+    name: material
+    icon:
+        logo: material/library
+    palette:
+        # Palette toggle for light mode
+        - media: "(prefers-color-scheme: light)"
+          scheme: default
+          primary: light blue
+          accent: indigo
+          toggle:
+            icon: material/brightness-7
+            name: Switch to dark mode
+
+        # Palette toggle for dark mode
+        - media: "(prefers-color-scheme: dark)"
+          scheme: slate
+          primary: light blue
+          accent: indigo
+          toggle:
+            icon: material/brightness-4
+            name: Switch to light mode
+
+markdown_extensions:
+    - toc:
+        permalink: true
+    - pymdownx.highlight:
+        anchor_linenums: true
+    - pymdownx.tasklist:
+        custom_checkbox: true
+    - pymdownx.inlinehilite
+    - pymdownx.snippets
+    - pymdownx.superfences
+
+plugins:
+    - search
+    - mkdocstrings:
+        handlers:
+            python:
+                import:
+                    - https://docs.python.org/3.10/objects.inv
+                options:
+                    docstring_style: google
+
+watch:
+    - docs
+    - geointerp
+
+nav:
+    - About: index.md
+    - Reference:
+        - geointerp: reference/geointerp.md
