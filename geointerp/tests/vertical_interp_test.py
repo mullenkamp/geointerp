@@ -87,6 +87,8 @@ def to_fixed_heights(xr_data, variable):
 
 
 
+
+
 def np_interp(dims, var, source_levels, new_levels):
     """
 
@@ -104,12 +106,9 @@ def np_interp(dims, var, source_levels, new_levels):
     var2 = np.moveaxis(var, level_index, -1)
     source_levels2 = np.moveaxis(source_levels, level_index, -1)
 
-    # n_levels_arr = np.asarray(range(n_levels))
     new_levels_arr = np.asarray(new_levels)
 
     for i in it:
-        # levels_index = np.interp(new_levels_arr, source_levels2[i], n_levels_arr)
-        # levels_var = np.interp(levels_index, n_levels_arr, var2[i])
         levels_var = np.interp(new_levels_arr, source_levels2[i], var2[i])
         out[i] = levels_var
 
