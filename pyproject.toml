@@ -5,22 +5,25 @@ authors = [
 ]
 description = "geospatial interpolations"
 readme = "README.md"
-version = '0.1.0'
+dynamic = ["version"]
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
 ]
 requires-python = ">=3.9"
 dependencies = [
-  'hdf5tools>=0.3.1',
-  'scipy~=1.0',
-  'pyproj~=3.0',
-  'h5netcdf~=1.1',
-
+  'numpy>=1.20',
+  'scipy>=1.7',
+  'pyproj>=3.0',
 ]
 
-[project.optional-dependencies]
-gpu = [
-  "cupy>=11",
+[dependency-groups]
+dev = [
+  "spyder-kernels==2.5.2",
+  "black",
+  "mypy",
+  "ruff",
+  "pytest",
+  "pytest-cov",
 ]
 
 # [tool.ruff]
@@ -34,26 +37,6 @@ addopts = "--cov=geointerp/ --cov-report=term-missing"
 
 [tool.hatch.metadata]
 allow-direct-references = true
-
-# [tool.hatch.version]
-# source = "regex_commit"
-# commit_extra_args = ["-e"]
-# path = "geointerp/__init__.py"
-
-[tool.hatch.envs.default]
-python = "3.10"
-dependencies = [
-    "spyder-kernels==2.4",
-    "black",
-    "mypy",
-    "ruff",
-    "pytest",
-    "pytest-cov",
-    "mkdocs-material",
-    "mkdocstrings[python]",
-    "cupy-cuda12x",
-    
-]
 
 [[tool.hatch.envs.all.matrix]]
 python = ['3.9', '3.10']
@@ -186,3 +169,6 @@ Source = "https://github.com/mullenkamp/geointerp"
 include = [
     "/geointerp",
 ]
+
+[tool.hatch.version]
+path = "geointerp/__init__.py"
