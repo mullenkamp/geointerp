@@ -1,0 +1,5 @@
+config,ny,nx,n_src,n_tgt,np_interp_ms,argmax_ms,speedup
+"Small  (20x30, 10 src, 20 tgt)",20,30,10,20,0.688,0.508,0.74
+"Medium (50x80, 20 src, 40 tgt)",50,80,20,40,5.457,4.852,0.89
+"Large  (100x200, 30 src, 50 tgt)",100,200,30,50,30.587,32.276,1.06
+"XLarge (200x400, 40 src, 80 tgt)",200,400,40,80,156.174,378.278,2.42
