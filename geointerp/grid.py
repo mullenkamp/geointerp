@@ -329,42 +329,15 @@ class GridInterpolator:
             levels_moved = np.moveaxis(source_levels, axis, 0)
 
             spatial_shape = data_moved.shape[1:]
-            n_src = data_moved.shape[0]
 
-            # Flatten spatial dims for vectorized operations
-            data_flat = data_moved.reshape(n_src, -1)
-            levels_flat = levels_moved.reshape(n_src, -1)
+            # Flatten spatial dims so each column is one profile
+            data_flat = data_moved.reshape(data_moved.shape[0], -1)
+            levels_flat = levels_moved.reshape(levels_moved.shape[0], -1)
             n_spatial = data_flat.shape[1]
 
             out = np.empty((n_tgt, n_spatial), dtype=data.dtype)
-            cols = np.arange(n_spatial)
-
-            for k in range(n_tgt):
-                tgt = target_levels[k]
-
-                # Find first source level >= target at each spatial point
-                above_mask = levels_flat >= tgt
-                above_idx = np.argmax(above_mask, axis=0)
-
-                # Handle target above all source levels (no level >= tgt)
-                no_above = ~above_mask.any(axis=0)
-                above_idx[no_above] = n_src - 1
-
-                below_idx = np.clip(above_idx - 1, 0, n_src - 1)
-
-                lev_below = levels_flat[below_idx, cols]
-                lev_above = levels_flat[above_idx, cols]
-                val_below = data_flat[below_idx, cols]
-                val_above = data_flat[above_idx, cols]
-
-                denom = lev_above - lev_below
-                safe_denom = np.where(denom == 0, 1.0, denom)
-                weight = np.clip(
-                    np.where(denom == 0, 0.0, (tgt - lev_below) / safe_denom),
-                    0.0, 1.0
-                )
-
-                out[k] = val_below + weight * (val_above - val_below)
+            for j in range(n_spatial):
+                out[:, j] = np.interp(target_levels, levels_flat[:, j], data_flat[:, j])
 
             result = out.reshape((n_tgt,) + spatial_shape)
             return np.moveaxis(result, 0, axis)

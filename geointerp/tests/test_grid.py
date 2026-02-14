@@ -225,3 +225,34 @@ class TestRegridLevels:
         # At boundaries, clamps to edge values
         np.testing.assert_allclose(result[0, 0, 0], 100.0, atol=1e-10)
         np.testing.assert_allclose(result[2, 0, 0], 300.0, atol=1e-10)
+
+    # def test_matches_np_interp(self):
+    #     """Verify regrid_levels matches np.interp column-by-column."""
+    #     gi = GridInterpolator()
+    #     ny, nx, n_src = 5, 6, 10
+    #     rng = np.random.default_rng(99)
+
+    #     # Variable source levels per (y, x), all spanning 0-1000
+    #     source_levels = np.zeros((n_src, ny, nx))
+    #     for i in range(ny):
+    #         for j in range(nx):
+    #             inner = np.sort(rng.uniform(50, 950, n_src - 2))
+    #             source_levels[:, i, j] = np.concatenate([[0], inner, [1000]])
+
+    #     # Non-trivial data: nonlinear function of level
+    #     data = np.sin(source_levels / 300.0) + source_levels ** 0.5
+
+    #     # Target levels spanning beyond source range to test clamping too
+    #     target_z = np.array([-50, 0, 100, 250, 500, 750, 999, 1000, 1100], dtype=float)
+    #     func = gi.regrid_levels(target_z, axis=0)
+    #     result = func(data, source_levels)
+
+    #     # Build reference with np.interp column-by-column
+    #     expected = np.empty((len(target_z), ny, nx))
+    #     for i in range(ny):
+    #         for j in range(nx):
+    #             expected[:, i, j] = np.interp(
+    #                 target_z, source_levels[:, i, j], data[:, i, j]
+    #             )
+
+    #     np.testing.assert_allclose(result, expected, atol=1e-10)
