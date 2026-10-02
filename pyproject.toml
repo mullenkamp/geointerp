@@ -24,6 +24,8 @@ dev = [
   "ruff",
   "pytest",
   "pytest-cov",
+  # Second route for geointerp.weights (exact polygon intersection; tests only).
+  "shapely",
 ]
 
 # [tool.ruff]
