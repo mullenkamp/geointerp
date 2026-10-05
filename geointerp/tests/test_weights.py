@@ -313,3 +313,64 @@ def test_anchor_sees_an_error_in_y_alone():
     lon, lat = _producer_lonlat(gx, gy)
     assert grid_anchor_residual(gx, gy + 2000.0, LCC, lon, lat, NZTM).min() > 1500
     assert grid_anchor_residual(gx + 2000.0, gy, LCC, lon, lat, NZTM).min() > 1500
+
+
+# --- without(): leaving cells out of a table ------------------------------------------------------
+
+
+def _toy():
+    """Two units on a 1 m raster over a 4 x 4 grid of 10 m cells (both in NZTM): unit 1 in cells (0..1, 0..1),
+    unit 2 in cells (2..3, 1..2)."""
+    labels = np.zeros((40, 40), int)
+    labels[:20, :20] = 1
+    labels[20:, 10:30] = 2
+    g = np.arange(5.0, 40.0, 10.0)
+    return area_weights(labels, (0, 1, 0, 0, 0, 1), NZTM, g, g, NZTM)
+
+
+def test_without_refuses_an_emptied_unit_a_short_mask_and_a_wrong_shape():
+    w = _toy()
+    full = np.zeros((4, 4), bool)
+    full[:2, :2] = True
+    with pytest.raises(ValueError, match=r'units \[1\] would have no cell left'):
+        w.without(full)
+    with pytest.raises(ValueError, match='does not cover'):
+        w.without(np.zeros((2, 2), bool), offset=(2, 2))
+    with pytest.raises(ValueError, match='not the grid shape'):
+        w.without(np.zeros((3, 4), bool))
+
+
+def test_without_renormalises_and_leaves_other_units_alone():
+    w = _toy()
+    field = np.arange(16.0).reshape(4, 4)
+    drop = np.zeros((4, 4), bool)
+    drop[0, 0] = True
+    wd = w.without(drop)
+    a, b = w(field), wd(field)
+    assert b[0] == pytest.approx(np.mean([field[0, 1], field[1, 0], field[1, 1]]))
+    assert b[1] == a[1]
+    assert wd(np.full((4, 4), 7.0)) == pytest.approx([7.0, 7.0])
+    np.testing.assert_allclose(w.kept_share(wd), [0.75, 1.0])
+    np.testing.assert_array_equal(wd.unit_area, w.unit_area)  # the units keep their area
+
+
+def test_without_honours_a_window_offset():
+    labels = np.zeros((40, 40), int)
+    labels[:20, :20] = 1
+    labels[20:, 10:30] = 2
+    g = np.arange(5.0, 60.0, 10.0)
+    ws = area_weights(labels, (10, 1, 0, 10, 0, 1), NZTM, g, g, NZTM)  # weighted cells start at (1, 1)
+    assert ws.iy.min() == 1 and ws.ix.min() == 1
+    win = np.zeros((4, 3), bool)
+    win[0, 1] = True  # grid cell (1, 2)
+    cells = set(zip(*(a.tolist() for a in (ws.without(win, offset=(1, 1)).iy, ws.without(win, offset=(1, 1)).ix)),
+                    strict=True))
+    assert (1, 2) not in cells and (1, 1) in cells
+
+
+def test_kept_share_refuses_a_table_of_other_units():
+    w = _toy()
+    other = area_weights(np.ones((40, 40), int), (0, 1, 0, 0, 0, 1), NZTM, np.arange(5.0, 40.0, 10.0),
+                         np.arange(5.0, 40.0, 10.0), NZTM)
+    with pytest.raises(ValueError, match='same units'):
+        w.kept_share(other)

@@ -17,7 +17,7 @@ once and returns an :class:`AreaWeights` object that applies the table to any nu
    mapping against coordinates the grid's producer wrote itself (e.g. WRF's ``XLAT``/``XLONG``)
    with :func:`grid_anchor_residual`, which goes through the same transform as the weights.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 from pyproj import CRS, Transformer
@@ -114,6 +114,67 @@ class AreaWeights:
         vals = field[..., iy, ix] * self.fraction
         starts = np.flatnonzero(np.r_[True, self.unit[1:] != self.unit[:-1]])
         return np.add.reduceat(vals, starts, axis=-1)
+
+    def without(self, drop, offset=None) -> 'AreaWeights':
+        """
+        The table without the cells flagged in ``drop``, each unit's fractions renormalised to sum to 1.
+
+        For fields that are meaningless at some cells: a land-surface field at cells the grid's model
+        treats as water, for example. The unit keeps its area (:attr:`unit_area` is unchanged); only the
+        cells that represent it change. Use :meth:`kept_share` to record how much of each unit is left.
+
+        Parameters
+        ----------
+        drop : array-like of bool, shape (ny, nx)
+            True at cells to leave out: the full grid when ``offset`` is None, or a window of it whose
+            first cell is at grid index ``offset``. It must cover every weighted cell.
+        offset : (int, int) or None
+            ``(iy0, ix0)`` of the window's first cell in the full grid.
+
+        Returns
+        -------
+        AreaWeights
+
+        Raises
+        ------
+        ValueError
+            If the mask does not cover every weighted cell, or a unit would have no cell left (an empty
+            mean is refused rather than returned as NaN).
+        """
+        drop = np.asarray(drop, bool)
+        if drop.ndim != 2:
+            raise ValueError(f'drop must be 2-D, got shape {drop.shape}')
+        if offset is None:
+            if drop.shape != tuple(self.grid_shape):
+                raise ValueError(f'drop shape {drop.shape} is not the grid shape {tuple(self.grid_shape)}; '
+                                 f'pass offset= for a window')
+            offset = (0, 0)
+        iy = self.iy - int(offset[0])
+        ix = self.ix - int(offset[1])
+        if (iy < 0).any() or (ix < 0).any() or (iy >= drop.shape[0]).any() or (ix >= drop.shape[1]).any():
+            raise ValueError('the drop mask does not cover every weighted cell')
+        keep = ~drop[iy, ix]
+        gone = sorted(set(self.units.tolist()) - set(self.unit[keep].tolist()))
+        if gone:
+            raise ValueError(f'units {gone} would have no cell left')
+        unit, frac = self.unit[keep], self.fraction[keep]
+        pos = np.searchsorted(self.units, unit)
+        total = np.bincount(pos, weights=frac, minlength=len(self.units))
+        return replace(self, unit=unit, iy=self.iy[keep], ix=self.ix[keep], fraction=frac / total[pos])
+
+    def kept_share(self, subset: 'AreaWeights') -> np.ndarray:
+        """
+        Share of each unit's area whose cells ``subset`` (from :meth:`without`) still holds, in the order
+        of :attr:`units`.
+        """
+        if not np.array_equal(subset.units, self.units) or tuple(subset.grid_shape) != tuple(self.grid_shape):
+            raise ValueError('subset is not a table of the same units on the same grid')
+        ny, nx = self.grid_shape
+        mine = self.unit.astype(np.int64) * ny * nx + self.iy.astype(np.int64) * nx + self.ix
+        theirs = subset.unit.astype(np.int64) * ny * nx + subset.iy.astype(np.int64) * nx + subset.ix
+        held = np.isin(mine, theirs)
+        return np.bincount(np.searchsorted(self.units, self.unit[held]), weights=self.fraction[held],
+                           minlength=len(self.units))
 
 
 def area_weights(labels, geotransform, crs, grid_x, grid_y, grid_crs, nodata=0,
